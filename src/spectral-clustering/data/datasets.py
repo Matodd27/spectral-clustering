@@ -18,5 +18,3 @@ def get_fashionmnist_dataloaders(batch_size=64, root="data/raw"):
         DataLoader(train, batch_size=batch_size, shuffle=True),
         DataLoader(test, batch_size=batch_size, shuffle=False),
     )
-    
-get_fashionmnist_dataloaders()
