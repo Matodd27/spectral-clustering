@@ -3,11 +3,12 @@ import torch.nn as nn
 import torch
 
 class VAE(BaseAE):
-    def __init__(self, latent_dim, input_dim=784, ):
+    def __init__(self, latent_dim, input_dim=784):
         super().__init__(latent_dim=latent_dim, input_dim=input_dim)
 
         # encoder
         self.encoder = nn.Sequential(
+            nn.Flatten(),
             nn.Linear(input_dim, 512),
             nn.LeakyReLU(0.2),
             nn.Linear(512, 256),

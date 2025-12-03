@@ -2,7 +2,7 @@ from .base import BaseAE
 import torch.nn as nn
 
 class FFAutoencoder(BaseAE):
-    def __init__(self, latent_dim, input_dim):
+    def __init__(self, latent_dim, input_dim=784):
         super().__init__(latent_dim=latent_dim, input_dim=input_dim)
         self.flatten = nn.Flatten()
         self.encoder = nn.Sequential(
