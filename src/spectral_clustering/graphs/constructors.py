@@ -62,3 +62,20 @@ def adaptive_neighbour_graph(X, gamma):
         S[i, neigh_idx] = s_i
 
     return S
+
+def compute_laplacian(S, kind='symmetric'):
+    d = S.sum(axis=1)
+    n = S.shape[0]
+
+    if kind == 'unnormalised':
+        D = np.diag(d)
+        return D - S
+    elif kind == 'symmetric':
+        d_inv_sqrt = 1.0 / np.sqrt(d)
+        D_inv_sqrt = np.diag(d_inv_sqrt)
+        return np.eye(n) - D_inv_sqrt @ S @ D_inv_sqrt
+    elif kind == 'rw':
+        d_inv = 1.0 / d
+        D_inv = np.diag(d_inv)
+        return np.eye(n) - D_inv @ S
+    raise ValueError('Laplacian kind not defined, valid kinds are: unnormalised, symmetric, rw')
