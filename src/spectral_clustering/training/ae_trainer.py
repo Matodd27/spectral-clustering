@@ -3,6 +3,7 @@ from typing import Callable, Optional, Any
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torch import nn
+import numpy as np
 
 
 class AETrainer:
@@ -81,7 +82,7 @@ class AETrainer:
                 z = z[0]
             latents.append(z.cpu())
 
-        return torch.cat(latents, dim=0)
+        return np.array(latents)
 
     @torch.no_grad()
     def decode_latent(
@@ -110,4 +111,4 @@ class AETrainer:
             x = model.decode(z)
             decoded.append(x.cpu())
 
-        return torch.cat(decoded, dim=0)
+        return np.array(decoded)
