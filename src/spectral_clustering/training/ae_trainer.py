@@ -9,6 +9,7 @@ import numpy as np
 class AETrainer:
     def __init__(
         self,
+        model: nn.Module,
         loss_fn: Optional[Callable[[torch.Tensor, Any], torch.Tensor]] = None,
         lr: float = 1e-3,
         device: Optional[str] = None,
@@ -18,21 +19,21 @@ class AETrainer:
         else:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        self.model = model
         self.loss_fn = loss_fn or (lambda x, out: nn.functional.mse_loss(out, x))
         self.lr = lr
 
     def fit(
         self,
-        model: nn.Module,
         train_loader: DataLoader,
         num_epochs: int = 20,
         optimiser: Optional[torch.optim.Optimizer] = None,
     ):
-        model.to(self.device)
-        model.train()
+        self.model.to(self.device)
+        self.model.train()
 
         if optimiser is None:
-            optimiser = torch.optim.Adam(model.parameters(), lr=self.lr)
+            optimiser = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
         for epoch in range(num_epochs):
             total_loss = 0.0
@@ -41,7 +42,7 @@ class AETrainer:
             for batch_idx, (x, *_) in enumerate(train_loader):
                 x = x.to(self.device)
                 optimiser.zero_grad()
-                outputs = model(x)                 # AE: x_hat; VAE: (x_hat, mu, logvar), etc.
+                outputs = self.model(x)                 # AE: x_hat; VAE: (x_hat, mu, logvar), etc.
                 loss = self.loss_fn(x, outputs)    # loss_fn decides how to unpack outputs
 
                 loss.backward()
@@ -54,61 +55,44 @@ class AETrainer:
             avg_loss = total_loss / total_samples
             print(f"Epoch {epoch + 1}/{num_epochs} - avg loss: {avg_loss:.4f}")
 
-        return model
+        return self.model
 
     @torch.no_grad()
     def encode_dataset(
         self,
-        model: nn.Module,
         data,
         batch_size: int = 256,
     ):
-        model.to(self.device)
-        model.eval()
+        self.model.to(self.device)
+        self.model.eval()
 
+        # Accept either a DataLoader or a Dataset/Tensor
         if isinstance(data, DataLoader):
             loader = data
         else:
             loader = DataLoader(data, batch_size=batch_size, shuffle=False)
-        
+
         latents = []
 
         for x, *rest in loader:
             x = x.to(self.device)
-            z = model.encode(x)[0]
-            if isinstance(z, tuple):
-                z = z[0]
+            x_flat = x.view(x.size(0), -1)
+
+            out = self.model.encode(x_flat)
+            if isinstance(out, tuple):
+                z = out[0]    
             else:
-                z = z[0]
+                z = out
+
             latents.append(z.cpu())
 
-        return np.array(latents)
+        return np.array(torch.cat(latents, dim=0).cpu())
+
 
     @torch.no_grad()
     def decode_latent(
         self,
-        model: nn.Module,
         data,
         batch_size: int=256
     ):
-        model.to(self.device)
-        model.eval()
-
-        if isinstance(data, DataLoader):
-            loader = data
-        else:
-            loader = DataLoader(data, batch_size=batch_size, shuffle=False)
-
-        decoded = []
-
-        for batch in loader:
-            if isinstance(batch, (tuple, list)):
-                z = batch[0]
-            else:
-                z = batch
-
-            z = z.to(self.device)
-            x = model.decode(z)
-            decoded.append(x.cpu())
-
-        return np.array(decoded)
+        return self.model.decode(torch.Tensor(data))
